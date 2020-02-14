@@ -9,6 +9,19 @@
 {% endif %}
 {% if vhost.documentroot is defined %}
   DocumentRoot "{{ vhost.documentroot }}"
+  ErrorDocument 404 /index.html
+  <Files ~ "\.(cgi|shtml|phtml|php3?)$">
+    SSLOptions +StdEnvVars
+  </Files>
+  <Directory "/var/www/cgi-bin">
+    SSLOptions +StdEnvVars
+  </Directory>
+  BrowserMatch "MSIE [2-5]" \
+         nokeepalive ssl-unclean-shutdown \
+         downgrade-1.0 force-response-1.0
+  <filesMatch "\.(js|css)$">
+    SetOutputFilter DEFLATE
+  </filesMatch>
 {% endif %}
 
 {% if vhost.serveradmin is defined %}
@@ -43,12 +56,28 @@
 {% endif %}
 {% if vhost.documentroot is defined %}
   DocumentRoot "{{ vhost.documentroot }}"
+  ErrorDocument 404 /index.html
+  <Files ~ "\.(cgi|shtml|phtml|php3?)$">
+    SSLOptions +StdEnvVars
+  </Files>
+  <Directory "/var/www/cgi-bin">
+    SSLOptions +StdEnvVars
+  </Directory>
+  BrowserMatch "MSIE [2-5]" \
+         nokeepalive ssl-unclean-shutdown \
+         downgrade-1.0 force-response-1.0
+  <filesMatch "\.(js|css)$">
+    SetOutputFilter DEFLATE
+  </filesMatch>
 {% endif %}
 
   SSLEngine on
   SSLCipherSuite {{ apache_ssl_cipher_suite }}
   SSLProtocol {{ apache_ssl_protocol }}
   SSLHonorCipherOrder On
+  SSLProxyVerify require
+  SSLProxycheckPeerCN off
+  SSLProxycheckPeerName off
 {% if apache_vhosts_version == "2.4" %}
   SSLCompression off
 {% endif %}
@@ -56,6 +85,14 @@
   SSLCertificateKeyFile {{ vhost.certificate_key_file }}
 {% if vhost.certificate_chain_file is defined %}
   SSLCertificateChainFile {{ vhost.certificate_chain_file }}
+{% endif %}
+
+{% if vhost.reverse_back is defined %}
+<Proxy balancer://back>
+    BalancerMember https://{{ vhost.reverse_back }}  keepalive=On retry=0 timeout=300
+</Proxy> 
+ProxyPass / balancer://back/
+ProxyPassReverse / balancer://back/
 {% endif %}
 
 {% if vhost.serveradmin is defined %}
