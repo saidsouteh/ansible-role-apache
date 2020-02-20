@@ -15,14 +15,25 @@ apache_remove_default_vhost: false
 
 apache_global_vhost_settings: |
   DirectoryIndex index.php index.html
+  <filesMatch "\.(js|css)$">
+    SetOutputFilter DEFLATE
+  </filesMatch>
+  <IfModule mpm_worker_module>
+  ServerLimit          16
+  StartServers          3
+  MinSpareThreads      75
+  MaxSpareThreads     250
+  ThreadsPerChild      25
+  MaxClients          400
+  MaxRequestsPerChild   0
+  </IfModule>
 
 apache_vhosts:
   # Additional properties:
   # 'serveradmin, serveralias, allow_override, options, extra_parameters'.
   - servername: "local.dev"
     documentroot: "/var/www/html"
-    reverse_back_1: "1.1.1.1"
-    reverse_back_2: "2.2.2.2"
+    stickysession: "yes"    
 
 apache_allow_override: "All"
 apache_options: "-Indexes +FollowSymLinks"
@@ -35,9 +46,16 @@ apache_vhosts_ssl:
    certificate_file: "/path/to/certificate.crt"
    certificate_key_file: "/path/to/certificate.key"
    certificate_chain_file: "/path/to/certificate_chain.crt"
-   reverse_back_1: "1.1.1.1"
-   reverse_back_2: "2.2.2.2"
-   
+   stickysession: "yes"
+   reverse:
+    - reverse_back: "1.1.1.1"
+      route: "1"
+    - reverse_back: "2.2.2.2" 
+      route: "2"
+   extra_parameters: |
+     RewriteEngine On
+     Rewritexxxxx
+        
    
 
 apache_ignore_missing_ssl_certificate: true

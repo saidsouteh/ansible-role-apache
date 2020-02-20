@@ -19,25 +19,10 @@
   BrowserMatch "MSIE [2-5]" \
          nokeepalive ssl-unclean-shutdown \
          downgrade-1.0 force-response-1.0
-  <filesMatch "\.(js|css)$">
-    SetOutputFilter DEFLATE
-  </filesMatch>
 {% endif %}
 
 {% if vhost.serveradmin is defined %}
   ServerAdmin {{ vhost.serveradmin }}
-{% endif %}
-{% if vhost.documentroot is defined %}
-  <Directory "{{ vhost.documentroot }}">
-    AllowOverride {{ vhost.allow_override | default(apache_allow_override) }}
-    Options {{ vhost.options | default(apache_options) }}
-{% if apache_vhosts_version == "2.2" %}
-    Order allow,deny
-    Allow from all
-{% else %}
-    Require all granted
-{% endif %}
-  </Directory>
 {% endif %}
 {% if vhost.extra_parameters is defined %}
   {{ vhost.extra_parameters }}
@@ -87,9 +72,20 @@
   SSLCertificateChainFile {{ vhost.certificate_chain_file }}
 {% endif %}
 
-{% if vhost.reverse_back is defined %}
+{% if vhost.reverse is defined %}
+{% if vhost.stickysession is defined %}
+Header add Set-Cookie "ROUTEID=.%{BALANCER_WORKER_ROUTE}e; path=/" env=BALANCER_ROUTE_CHANGED
+{% endif %}
 <Proxy balancer://back>
-    BalancerMember https://{{ vhost.reverse_back }}  keepalive=On retry=0 timeout=300
+{% for back_server in vhost.reverse %}
+{% if vhost.stickysession is defined %} 
+   ProxySet stickysession=ROUTEID 
+   BalancerMember https://{{ back_server.reverse_back }} route={{ back_server.route }}   keepalive=On retry=0 timeout=300
+{% endif %}
+{% if vhost.stickysession is not defined %}
+   BalancerMember https://{{ back_server.reverse_back }}    keepalive=On retry=0 timeout=300
+{% endif %}
+{% endfor %}
 </Proxy> 
 ProxyPass / balancer://back/
 ProxyPassReverse / balancer://back/
@@ -97,18 +93,6 @@ ProxyPassReverse / balancer://back/
 
 {% if vhost.serveradmin is defined %}
   ServerAdmin {{ vhost.serveradmin }}
-{% endif %}
-{% if vhost.documentroot is defined %}
-  <Directory "{{ vhost.documentroot }}">
-    AllowOverride {{ vhost.allow_override | default(apache_allow_override) }}
-    Options {{ vhost.options | default(apache_options) }}
-{% if apache_vhosts_version == "2.2" %}
-    Order allow,deny
-    Allow from all
-{% else %}
-    Require all granted
-{% endif %}
-  </Directory>
 {% endif %}
 {% if vhost.extra_parameters is defined %}
   {{ vhost.extra_parameters }}
